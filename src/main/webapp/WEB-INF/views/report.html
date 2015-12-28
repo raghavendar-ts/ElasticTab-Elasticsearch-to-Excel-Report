@@ -1,0 +1,265 @@
+<md-progress-circular ng-show="loading" style="position: fixed;top: 42%;left: 45%;" md-mode="indeterminate"></md-progress-circular>
+<div style="width: 100%; margin-top: 2px; height: calc(100% - 100px);">
+    <!--<form name="reportForm" novalidate="novalidate">-->
+    <form name="reportForm">
+        <div layout="row">
+            <div style="padding-left: 8px; padding-right: 8px; min-height: 100%;  width: 280px;">
+                <!--Report Block Start-->
+                <div>
+                    <div>
+                        <div class="category">Report</div>
+                    </div>
+                    <div layout="column">
+                        <div>
+                            <md-input-container>
+                                <label>Report Name</label>
+                                <input type="text" required name="inputDataConfig_report_name" ng-model="inputDataConfig.report.name">
+                                <div ng-messages="reportForm.inputDataConfig_report_name.$error">
+                                    <div ng-message="required">This is required.</div>
+                                </div>
+                            </md-input-container>
+                            <md-button class="md-icon-button" style="float: right;margin-top: -77px;" ng-click="getScheduleConfig($event)">
+                                <md-icon style="color:#2196F3;" md-font-library="material-icons">restore</md-icon>
+                                <md-tooltip md-direction="bottom"> Load Job</md-tooltip>
+                            </md-button>
+                        </div>
+                        <div>
+                            <md-input-container>
+                                <label>File Name</label>
+                                <input type="text" required name="inputDataConfig_report_fileName" ng-model="inputDataConfig.report.fileName">
+                                <div ng-messages="reportForm.inputDataConfig_report_fileName.$error">
+                                    <div ng-message="required">This is required.</div>
+                                </div>
+                            </md-input-container>
+                        </div>
+                        <div>
+                            <md-input-container>
+                                <label>Description</label>
+                                <input type="text" required name="inputDataConfig_report_description" ng-model="inputDataConfig.report.description">
+                                <div ng-messages="reportForm.inputDataConfig_report_description.$error">
+                                    <div ng-message="required">This is required.</div>
+                                </div>
+                            </md-input-container>
+                        </div>
+                    </div>
+                </div>
+                <!--Report Block End-->
+                <!--Elasticsearch Block Start-->
+                <div>
+                    <div>
+                        <div class="category">Elasticsearch</div>
+                    </div>
+                    <div layout="column">
+                        <div>
+                            <div layout="row">
+                                <div flex="90">
+                                    <md-input-container>
+                                        <label>Alias</label>
+                                        <md-select ng-model="inputDataConfig.elasticsearch.alias">
+                                            <md-option ng-selected="$first" ng-repeat="alias in aliasList" value="{{alias}}"> {{alias}}</md-option>
+                                        </md-select>
+                                    </md-input-container>
+                                </div>
+                                <div flex="10">
+                                    <md-checkbox style="margin-top: 22px;" md-no-ink aria-label="Checkbox No Ink" ng-model="inputDataConfig.elasticsearch.useAlias" class="md-primary"> </md-checkbox>
+                                    <md-tooltip md-direction="right"> Check to use Alias instead of Index while querying</md-tooltip>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <md-input-container>
+                                <label>Index</label>
+                                <md-select ng-change="esIndexChanged()" ng-model="inputDataConfig.elasticsearch.index">
+                                    <md-option ng-selected="$first" ng-repeat="index in indexList" value="{{index}}"> {{index}}</md-option>
+                                </md-select>
+                            </md-input-container>
+                        </div>
+                        <div>
+                            <md-input-container>
+                                <label>Type</label>
+                                <md-select ng-change="esTypeChanged()" ng-model="inputDataConfig.elasticsearch.type">
+                                    <md-option ng-repeat="type in typeList" value="{{type}}"> {{type}}</md-option>
+                                </md-select>
+                            </md-input-container>
+                        </div>
+                        <div>
+                            <md-input-container>
+                                <label>Routing</label>
+                                <input type="text" name="inputDataConfig_elasticsearch_routing" ng-model="inputDataConfig.elasticsearch.routing"> </md-input-container>
+                        </div>
+                    </div>
+                </div>
+                <!--Elasticsearch Block End-->
+            </div>
+            <div flex="auto" style="padding-left: 8px; padding-right: 8px; min-height: 100%;border-left: 1px solid #E1E1E1;border-right: 1px solid #E1E1E1;">
+                <!--Elasticsearch Block Start-->
+                <div>
+                    <div>
+                        <div class="category">Elasticsearch</div>
+                    </div>
+                    <div layout="row">
+                        <md-input-container flex>
+                            <label>Query</label>
+                            <textarea required name="inputDataConfig_elasticsearch_query" ng-model="inputDataConfig.elasticsearch.query" columns="1" rows="10"></textarea>
+                            <div ng-messages="reportForm.inputDataConfig_elasticsearch_query.$error">
+                                <div ng-message="required">This is required.</div>
+                            </div>
+                        </md-input-container>
+                        <md-button class="md-icon-button" style="left: -100px;" ng-click="addDefaultFieldsToQuery($event)">
+                            <md-icon style="color:#2196F3;" md-font-library="material-icons">playlist_add</md-icon>
+                            <md-tooltip md-direction="bottom"> Add Fields to Query </md-tooltip>
+                        </md-button>
+                        <md-button class="md-icon-button" style="left: -120px;font-size: 16px;font-weight: 500;color: #2196F3;" ng-click="loadDefaultQuery($event)"> {&nbsp;}
+                            <md-tooltip md-direction="bottom"> Load Default Query</md-tooltip>
+                        </md-button>
+                        <md-input-container flex>
+                            <label>Value Mapping</label>
+                            <textarea name="inputDataConfig_elasticsearch_valueMapping" ng-model="inputDataConfig.elasticsearch.valueMapping" columns="1" rows="10"></textarea>
+                        </md-input-container>
+                    </div>
+                </div>
+                <!--Elasticsearch Block End-->
+                <!--Config Block Start-->
+                <div>
+                    <div>
+                        <div class="category">
+                            Config
+                            <md-icon ng-click="addEmptyConfig()" md-font-library="material-icons" style="float: right;margin-right: 20px;color: #2196F3;">
+                                <md-tooltip md-direction="bottom"> Add Column
+                                </md-tooltip>add_circle</md-icon>
+                            <md-icon ng-click="loadDefaultConfig()" style="float: right;color:#2196F3;margin-right: 12px;" md-font-library="material-icons">
+                                <md-tooltip md-direction="bottom"> Load Default Fields</md-tooltip>refresh</md-icon>
+                        </div>
+                    </div>
+                    <div>
+                        <table style="width: 100%;" class="table table-bordered" id="configTable">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Title</th>
+                                    <th>Expression</th>
+                                    <th>-</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr ng-repeat="config in inputDataConfig.reportColumnConfig track by $index">
+                                    <ng-form name="configForm{{$index}}">
+                                        <td>{{$index+1}}</td>
+                                        <td>
+                                            <md-input-container flex>
+                                                <label>Title</label>
+                                                <input required name="config_title" ng-model="config.title">
+                                                <div ng-messages="configForm{{$index}}.config_title.$error">
+                                                    <div ng-message="required">This is required.</div>
+                                                </div>
+                                            </md-input-container>
+                                        </td>
+                                        <td>
+                                            <md-input-container flex>
+                                                <label>Expression</label>
+                                                <input required name="config_expression" ng-model="config.expression">
+                                                <div ng-messages="configForm{{$index}}.config_expression.$error">
+                                                    <div ng-message="required">This is required.</div>
+                                                </div>
+                                            </md-input-container>
+                                        </td>
+                                        <td width="62px">
+                                            <md-button class="md-icon-button" ng-click="removeConfig($index)">
+                                                <md-icon style="color:#BC0C0C;" md-font-library="material-icons">remove_circle_outline</md-icon>
+                                            </md-button>
+                                        </td>
+                                    </ng-form>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <!--Config Block End-->
+                <!--Report Accesc Block Start-->
+                <div>
+                    <div>
+                        <div class="category">Report Access (Excel)</div>
+                    </div>
+                    <div>
+                        <div layout="row">
+                            <div flex="15" style="padding-top: 13px;">
+                                <md-checkbox md-no-ink aria-label="Checkbox No Ink" ng-model="inputDataConfig.reportAccess.mailReportEnabled" class="md-primary"> E-Mail </md-checkbox>
+                            </div>
+                            <div flex="85">
+                                <md-input-container>
+                                    <label>Subject</label>
+                                    <input ng-required="inputDataConfig.reportAccess.mailReportEnabled" name="inputDataConfig_reportAccess_mailReport_subject" ng-model="inputDataConfig.reportAccess.mailReport.subject">
+                                    <div ng-messages="reportForm.inputDataConfig_reportAccess_eMail_subject.$error">
+                                        <div ng-message="required">This is required.</div>
+                                    </div>
+                                </md-input-container>
+                            </div>
+                        </div>
+                        <div layout="row">
+                            <div flex="15"></div>
+                            <div flex="85">
+                                <md-chips ng-model="inputDataConfig.reportAccess.mailReport.mailList" placeholder="Enter E-Mail Address" delete-button-label="Remove E-Mail" delete-hint="Press delete to remove E-Mail" secondary-placeholder="+E-Mail"></md-chips>
+                            </div>
+                        </div>
+                        <div layout="row">
+                            <div flex="15" style="padding-top: 13px;">
+                                <md-checkbox md-no-ink aria-label="Checkbox No Ink" ng-model="inputDataConfig.reportAccess.scheduleReportEnabled" class="md-primary"> Schedule </md-checkbox>
+                            </div>
+                            <div flex="85">
+                                <md-chips ng-model="inputDataConfig.reportAccess.scheduleReport.cronExpressionList" placeholder="+CRON" delete-button-label="Remove CRON" delete-hint="Press delete to remove CRON" secondary-placeholder="Enter CRON"></md-chips>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!--Report Access Block End-->
+                <BR>
+            </div>
+            <div id="style-5" style="padding-left: 8px; padding-right: 8px; min-height: 100%; max-height: 100%;  width: 280px; overflow-y: scroll; overflow-x: hidden;">
+                <!--Field List Block Start-->
+                <div>
+                    <div>
+                        <div class="category">Fields</div>
+                    </div>
+                    <div>
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr ng-repeat="field in esFieldList track by $index">
+                                    <td style="vertical-align: middle; max-width: 224px; overflow: hidden;">{{field}}</td>
+                                    <td style="width: 37px; padding-left: 0px; padding-right: 0px;">
+                                        <md-button style="height:26px;max-width:24px;" class="md-icon-button" ngclipboard data-clipboard-text="{{field}}">
+                                            <md-icon style="color:#2196F3;" md-font-library="material-icons">my_library_books</md-icon>
+                                        </md-button>
+                                    </td>
+                                </tr>
+                        </table>
+                    </div>
+                </div>
+                <!--Field List Block End-->
+            </div>
+        </div>
+    </form>
+</div>
+<!--Control Block Start-->
+<div style="width: 260px; right: 2px; bottom: 2px; position: fixed;">
+    <md-button style="min-width: 45px;" ng-click="downloadReport($event)" class="md-raised md-primary">
+        <md-tooltip md-direction="top"> Download Report</md-tooltip>
+        <md-icon md-font-library="material-icons">file_download</md-icon>
+    </md-button>
+    <md-button style="min-width: 45px;" ng-click="scheduleReport($event)" ng-disabled="disableSchedule()" class="md-raised md-primary">
+        <md-tooltip md-direction="top"> Schedule Job</md-tooltip>
+        <md-icon md-font-library="material-icons">add_alarm</md-icon>
+    </md-button>
+    <md-button style="min-width: 45px;" ng-click="updateScheduleReport($event)" ng-disabled="disableSchedule()" class="md-raised md-primary">
+        <md-tooltip md-direction="top">
+            Update Job</md-tooltip>
+        <md-icon md-font-library="material-icons">access_alarm</md-icon>
+    </md-button>
+    <md-button style="min-width: 45px;" ng-click="mailReport($event)" ng-disabled="disableEMail()" class="md-raised md-primary">
+        <md-tooltip md-direction="top"> E-Mail Report</md-tooltip>
+        <md-icon md-font-library="material-icons">mail</md-icon>
+    </md-button>
+</div>
+<!--Control Block End-->
+<form id="dummyForm" name="dummyForm" target="_blank" action="/API/esreport/download" ng-submit="dummySubmit()" method="post">
+    <input type="hidden" name="inputDataConfigString" ng-value="inputDataConfigString">
+</form>

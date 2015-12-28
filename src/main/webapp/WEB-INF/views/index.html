@@ -1,0 +1,652 @@
+<html ng-app="esReportApp">
+
+<head>
+    <title>ES</title>
+    <script src="js/jquery.min.js"></script>
+    <script src="js/jquery-ui.min.js"></script>
+    <script src="js/angular.min.js"></script>
+    <script src="js/angular-messages.min.js"></script>
+    <script src="js/angular-animate.min.js"></script>
+    <script src="js/angular-aria.min.js"></script>
+    <script src="js/angular-material.min.js"></script>
+    <script src="js/angular-ui.min.js"></script>
+    <link rel="stylesheet" href="css/angular-material.min.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <script src="js/angular-route.js"></script>
+    <link rel="stylesheet" href="css/report.css">
+    <script type="text/javascript" src="js/md-data-table.min.js"></script>
+    <link rel="stylesheet" href="css/md-data-table.min.css" />
+    <script src="js/clipboard.min.js"></script>
+    <script src="js/ngclipboard.min.js"></script>
+    <style type="text/css">
+    md-toast.md-top {
+        top: 42px;
+        position: fixed;
+    }
+    </style>
+</head>
+
+<body ng-controller="mainController">
+    <md-progress-circular ng-show="loading" style="position: fixed;top: 42%;left: 45%;" md-mode="indeterminate"></md-progress-circular>
+    <div ng-include="'header.html'"></div>
+    <div ng-view></div>
+</body>
+<script type="text/javascript">
+var app = angular.module('esReportApp', ['ngRoute', 'ngMaterial', 'ngMessages', 'ui', 'ui', 'md.data.table', 'ngclipboard']);
+
+app.config(['$routeProvider', function($routeProvider) {
+    $routeProvider.when('/', {
+            templateUrl: 'report.html',
+            controller: 'reportController'
+        }).when('/report', {
+            templateUrl: 'report.html',
+            controller: 'reportController'
+        })
+        .when('/report/:jobName', {
+            templateUrl: 'report.html',
+            controller: 'reportController'
+        })
+        .when('/job', {
+            templateUrl: 'job.html',
+            controller: 'jobController'
+        })
+}]);
+
+app.factory('esReportFactory', function($http, $q) {
+    return {
+        scheduleReport: function(inputDataConfig) {
+            var deferred = $q.defer();
+            $http.post('/API/esreport/scheduleReport', inputDataConfig).success(function(data) {
+                deferred.resolve(data);
+            }).error(function(data, status) {
+                deferred.reject(data);
+            });
+            return deferred.promise;
+        },
+        mailReport: function(inputDataConfig) {
+            var deferred = $q.defer();
+            $http.post('/API/esreport/mailReport', inputDataConfig).success(function(data) {
+                deferred.resolve(data);
+            }).error(function(data, status) {
+                deferred.reject(data);
+            });
+            return deferred.promise;
+        },
+        getScheduleConfig: function(reportName) {
+            var deferred = $q.defer();
+            $http.post('/API/esreport/getScheduleConfig', {
+                "reportName": reportName
+            }).success(function(data) {
+                deferred.resolve(data);
+            }).error(function(data, status) {
+                deferred.reject(data);
+            });
+            return deferred.promise;
+        },
+        updateScheduleReport: function(inputDataConfig) {
+            var deferred = $q.defer();
+            $http.post('/API/esreport/updateScheduleReport', inputDataConfig).success(function(data) {
+                deferred.resolve(data);
+            }).error(function(data, status) {
+                deferred.reject(data);
+            });
+            return deferred.promise;
+        },
+        listJobs: function() {
+            var deferred = $q.defer();
+            $http.get('/API/esreport/listJobs').success(function(data) {
+                deferred.resolve(data);
+            }).error(function(data, status) {
+                deferred.reject(data);
+            });
+            return deferred.promise;
+        },
+        updateJobState: function(index, jobName, triggerName, triggerState) {
+            var deferred = $q.defer();
+            $http.post('/API/esreport/updateJobState', {
+                "jobName": jobName,
+                "triggerName": triggerName,
+                "triggerState": triggerState,
+                "index": index
+            }).success(function(data) {
+                deferred.resolve(data);
+            }).error(function(data, status) {
+                deferred.reject(data);
+            });
+            return deferred.promise;
+        },
+        deleteJob: function(jobName) {
+            var deferred = $q.defer();
+            $http.post('/API/esreport/deleteJob', {
+                "jobName": jobName
+            }).success(function(data) {
+                deferred.resolve(data);
+            }).error(function(data, status) {
+                deferred.reject(data);
+            });
+            return deferred.promise;
+        },
+        triggerJob: function(jobName) {
+            var deferred = $q.defer();
+            $http.post('/API/esreport/runJob', {
+                "jobName": jobName
+            }).success(function(data) {
+                deferred.resolve(data);
+            }).error(function(data, status) {
+                deferred.reject(data);
+            });
+            return deferred.promise;
+        },
+        getESFieldList: function(index, type) {
+            var deferred = $q.defer();
+            $http.post('/API/esreport/getESFieldList', {
+                "index": index,
+                "type": type
+            }).success(function(data) {
+                deferred.resolve(data);
+            }).error(function(data, status) {
+                deferred.reject(data);
+            });
+            return deferred.promise;
+        },
+        getTypeListFromIndex: function(index) {
+            var deferred = $q.defer();
+            $http.post('/API/esreport/getTypeListFromIndex', {
+                "index": index
+            }).success(function(data) {
+                deferred.resolve(data);
+            }).error(function(data, status) {
+                deferred.reject(data);
+            });
+            return deferred.promise;
+        },
+        getIndexTypeMapping: function() {
+            var deferred = $q.defer();
+            $http.get('/API/esreport/getIndexTypeMapping').success(function(data) {
+                deferred.resolve(data);
+            }).error(function(data, status) {
+                deferred.reject(data);
+            });
+            return deferred.promise;
+        }
+    }
+});
+
+app.controller('mainController', function($scope, $mdDialog, $mdToast) {});
+
+app.controller('jobController', function($scope, $mdDialog, $mdToast, $location, esReportFactory) {
+    $scope.$location = $location;
+
+    $scope.jobList = [];
+    $scope.init = function() {
+        $scope.showLoading();
+        var promise = esReportFactory.listJobs();
+        promise.then(function(response) {
+            $scope.jobList = response;
+        }).catch(function() {
+            console.log("error");
+        }).finally(function() {
+            $scope.hideLoading();
+        });
+    }
+
+    $scope.showLoading = function() {
+        $scope.loading = true;
+    }
+
+    $scope.hideLoading = function() {
+        $scope.loading = false;
+    }
+
+    $scope.getTriggerState = function(triggerState) {
+        if (triggerState == "NORMAL") {
+            return true;
+        } else if (triggerState == "PAUSED") {
+            return false;
+        }
+    }
+
+    $scope.updateJobState = function(index, jobName, triggerName, triggerState) {
+        $scope.showLoading();
+        var promise = esReportFactory.updateJobState(index, jobName, triggerName, triggerState);
+        promise.then(function(response) {
+            $scope.showSimpleToast(response);
+        }).catch(function() {
+            $scope.showSimpleToast("Error while changing the state of the job " + jobName + "#" + index);
+        }).finally(function() {
+            $scope.hideLoading();
+        });
+    }
+
+    $scope.triggerJob = function(event, jobName) {
+        $scope.showLoading();
+        var promise = esReportFactory.triggerJob(jobName);
+        promise.then(function(response) {
+            $scope.showSimpleToast(response.statusMessageMessage);
+        }).catch(function() {
+            $scope.showSimpleToast("Error while changing the state of the job " + jobName + "#" + index);
+        }).finally(function() {
+            $scope.hideLoading();
+        });
+    }
+
+    $scope.deleteJob = function(event, index, jobName) {
+        var confirm = $mdDialog.confirm()
+            .title('Delete Job')
+            .content('Are you sure you want to delete the job ' + jobName + ' ?')
+            .ariaLabel('Lucky day')
+            .targetEvent(event)
+            .ok('Yes')
+            .cancel('No');
+        $mdDialog.show(confirm).then(function() {
+            $scope.showLoading();
+            var promise = esReportFactory.deleteJob(jobName);
+            promise.then(function(response) {
+                $scope.jobList.splice(index, 1);
+                $scope.showSimpleToast(response);
+            }).catch(function() {
+                $scope.showSimpleToast("Error while deleting the job " + jobName);
+            }).finally(function() {
+                $scope.hideLoading();
+            });
+        }, function() {
+
+        });
+    }
+
+    $scope.showSimpleToast = function(content) {
+        $mdToast.show(
+            $mdToast.simple()
+            .content(content)
+            .position($scope.getToastPosition())
+            .hideDelay(3000)
+        );
+    };
+
+    var last = {
+        bottom: false,
+        top: true,
+        left: false,
+        right: true
+    };
+    $scope.toastPosition = angular.extend({}, last);
+
+    $scope.getToastPosition = function() {
+        $scope.sanitizePosition();
+        return Object.keys($scope.toastPosition).filter(function(pos) {
+            return $scope.toastPosition[pos];
+        }).join(' ');
+    };
+
+    $scope.sanitizePosition = function() {
+        var current = $scope.toastPosition;
+        if (current.bottom && last.top) current.top = false;
+        if (current.top && last.bottom) current.bottom = false;
+        if (current.right && last.left) current.left = false;
+        if (current.left && last.right) current.right = false;
+        last = angular.extend({}, current);
+    }
+
+    $scope.init();
+});
+
+app.controller('reportController', function($q, $scope, $mdDialog, $mdToast, $routeParams, esReportFactory) {
+
+    $scope.loadDefaultQuery = function(event) {
+        var query = {
+            "query": {
+                "match_all": {}
+            },
+            "fields": []
+        };
+        if ($scope.esFieldList.length > 0) {
+            query.fields = $scope.esFieldList;
+        }
+        $scope.inputDataConfig.elasticsearch.query = JSON.stringify(query);
+    }
+
+    $scope.addDefaultFieldsToQuery = function(event) {
+        if ($scope.esFieldList.length > 0) {
+            var query = {};
+            try {
+                query = JSON.parse($scope.inputDataConfig.elasticsearch.query);
+                query.fields = $scope.esFieldList;
+                $scope.inputDataConfig.elasticsearch.query = JSON.stringify(query);
+            } catch (e) {
+                $scope.showAlert(event, "Enter a valid query and try again");
+            }
+        } else {
+            $scope.showAlert(event, "No Fields to load");
+        }
+    }
+
+    $scope.esIndexChanged = function() {
+        $scope.esFieldList = [];
+        $scope.typeList = $scope.indexTypeMapping[$scope.inputDataConfig.elasticsearch.index];
+        if ($scope.typeList.length > 0) {
+            $scope.inputDataConfig.elasticsearch.type = $scope.typeList[0]
+        }
+        $scope.getESFieldList($scope.inputDataConfig.elasticsearch.index, $scope.inputDataConfig.elasticsearch.type);
+    }
+
+    $scope.esTypeChanged = function() {
+        $scope.esFieldList = [];
+        $scope.getESFieldList($scope.inputDataConfig.elasticsearch.index, $scope.inputDataConfig.elasticsearch.type);
+    }
+
+    $scope.loadDefaultConfig = function() {
+        if ($scope.esFieldList.length > 0) {
+            var reportColumnConfigTemp = [];
+            for (var i = 0; i < $scope.esFieldList.length; i++) {
+                var title = $scope.esFieldList[i].replace(/\./g, ' ');
+                reportColumnConfigTemp.push({
+                    "title": title,
+                    "expression": "[0," + $scope.esFieldList[i] + "]"
+                })
+            }
+            $scope.inputDataConfig.reportColumnConfig = reportColumnConfigTemp;
+        }
+    }
+
+    $scope.getESFieldList = function(index, type) {
+        $scope.showLoading();
+        var promise = esReportFactory.getESFieldList(index, type);
+        promise.then(function(response) {
+            $scope.esFieldList = response;
+        }).catch(function() {
+            console.log("error");
+        }).finally(function() {
+            $scope.hideLoading();
+        });
+    }
+
+
+    $scope.getIndexTypeMapping = function() {
+        $scope.showLoading();
+        var promise = esReportFactory.getIndexTypeMapping();
+        promise.then(function(response) {
+            $scope.indexTypeMapping = response.indexTypeMapping;
+            $scope.indexList = response.indexList;
+            $scope.aliasList = response.aliasList;
+            $scope.typeList = response.indexTypeMapping[$scope.indexList[0]]
+        }).catch(function() {}).finally(function() {
+            $scope.hideLoading();
+        });
+    }
+
+    $scope.esFieldList = [];
+
+    $scope.init = function() {
+        $scope.showLoading();
+        var promise = esReportFactory.getIndexTypeMapping();
+        promise.then(function(response) {
+            $scope.indexTypeMapping = response.indexTypeMapping;
+            $scope.indexList = response.indexList;
+            $scope.aliasList = response.aliasList;
+            $scope.typeList = response.indexTypeMapping[$scope.indexList[0]]
+
+            if ($routeParams.jobName != undefined) {
+                $scope.getScheduleConfig(event, $routeParams.jobName)
+            } else {
+                if ($scope.typeList.length > 0) {
+                    $scope.inputDataConfig.elasticsearch.type = $scope.typeList[0];
+                }
+            }
+        }).catch(function() {}).finally(function() {
+
+        });
+    }
+
+    $scope.inputDataConfigString = "";
+    $scope.inputDataConfig = {
+        "elasticsearch": {
+        },
+        "reportColumnConfig": [],
+        "reportAccess": {
+            "mailReport": {
+                "mailList": [],
+                "subject": "Report"
+            },
+            "scheduleReport": {
+                "cronExpressionList": ["0 30 10-13 ? * WED,FRI", "0 30 10-13 ? * TUE"]
+            },
+            "fileReportEnabled": false,
+            "mailReportEnabled": true,
+            "scheduleReportEnabled": true
+        },
+    };
+
+    $scope.addEmptyConfig = function() {
+        var emptyConfig = {
+            "title": "",
+            "expression": ""
+        };
+        $scope.inputDataConfig.reportColumnConfig.push(emptyConfig);
+    }
+
+    $scope.removeConfig = function(index) {
+        $scope.inputDataConfig.reportColumnConfig.splice(index, 1);
+    }
+
+    $scope.downloadReport = function(event) {
+        $scope.inputDataConfig.reportAccess.mailReportEnabled = false;
+        $scope.inputDataConfig.reportAccess.scheduleReportEnabled = false;
+        $scope.inputDataConfig.reportAccess.fileReportEnabled = false;
+
+        if ($scope.inputDataConfig.reportColumnConfig.length == 0) {
+            $scope.showAlert(event, "Enter atleast 1 config");
+            return false;
+        }
+
+        if ($scope.inputDataConfig.elasticsearch.valueMapping != undefined && $scope.inputDataConfig.elasticsearch.valueMapping.length > 0) {
+            var valueMapping;
+            try {
+                valueMapping = JSON.parse($scope.inputDataConfig.elasticsearch.valueMapping);
+            } catch (e) {
+                $scope.showAlert(event, "Value Mapping is not a valid JSON");
+                return false;
+            }
+        }
+
+        if ($scope.reportForm.$valid) {
+            document.dummyForm.inputDataConfigString.value = JSON.stringify($scope.inputDataConfig);
+            document.dummyForm.submit();
+        }
+    }
+
+    $scope.scheduleReport = function(event) {
+        console.log($scope.inputDataConfig)
+        if ($scope.inputDataConfig.reportColumnConfig.length == 0) {
+            $scope.showAlert(event, "Enter atleast 1 config");
+            return false;
+        }
+
+        if ($scope.reportForm.$valid) {
+            $scope.showLoading();
+            var promise = esReportFactory.scheduleReport($scope.inputDataConfig);
+            promise.then(function(response) {
+                if (response.statusMessageCode == 0) {
+                    $scope.showAlert(event, "Error", response.statusMessage);
+                } else {
+                    $scope.showSimpleToast(response.statusMessage);
+                }
+            }).catch(function() {
+                console.log("error");
+            }).finally(function() {
+                $scope.hideLoading();
+            });
+        }
+    }
+
+    $scope.updateScheduleReport = function(event) {
+        if ($scope.inputDataConfig.reportColumnConfig.length == 0) {
+            $scope.showAlert(event, "Enter atleast 1 config");
+            return false;
+        }
+
+        if ($scope.reportForm.$valid) {
+            $scope.inputDataConfig.reportAccess.mailReportEnabled = false;
+
+            $scope.showLoading();
+            var promise = esReportFactory.updateScheduleReport($scope.inputDataConfig);
+            promise.then(function(response) {
+                if (response.statusMessageCode == 0) {
+                    $scope.showAlert(event, "Error", response.statusMessage);
+                } else {
+                    $scope.showSimpleToast("job " + $scope.inputDataConfig.report.name + " updated successfully");
+                }
+            }).catch(function() {
+                console.log("error");
+            }).finally(function() {
+                $scope.hideLoading();
+            });
+        }
+    }
+
+    $scope.mailReport = function(event) {
+        if ($scope.inputDataConfig.reportColumnConfig.length == 0) {
+            $scope.showAlert(event, "Enter atleast 1 config");
+            return false;
+        }
+
+        if ($scope.reportForm.$valid) {
+            $scope.inputDataConfig.reportAccess.scheduleReportEnabled = false;
+            $scope.showLoading();
+            var promise = esReportFactory.mailReport($scope.inputDataConfig);
+            promise.then(function(response) {
+                if (response.statusMessageCode == 0) {
+                    $scope.showAlert(event, "Error", response.statusMessage);
+                } else {
+                    $scope.showSimpleToast(response.statusMessage);
+                }
+            }).catch(function() {
+                console.log("error");
+            }).finally(function() {
+                $scope.hideLoading();
+            });
+        }
+    }
+
+    $scope.showLoading = function() {
+        $scope.loading = true;
+    }
+
+    $scope.hideLoading = function() {
+        $scope.loading = false;
+    }
+
+    $scope.dummySubmit = function() {
+        console.log("dummySubmit")
+        $scope.inputDataConfigString = JSON.stringify($scope.inputDataConfig);
+        document.dummyForm.submit();
+    }
+
+    $scope.disableSchedule = function() {
+        if (!$scope.inputDataConfig.reportAccess.scheduleReportEnabled) {
+            return true;
+        }
+        if ($scope.inputDataConfig.reportAccess.scheduleReport.cronExpressionList.length == 0) {
+            return true;
+        }
+        if (!$scope.inputDataConfig.reportAccess.mailReportEnabled) {
+            return true;
+        }
+        if ($scope.inputDataConfig.reportAccess.mailReport.mailList.length == 0) {
+            return true;
+        }
+        if ($scope.inputDataConfig.reportAccess.mailReport.subject == undefined) {
+            return true;
+        }
+    }
+
+    $scope.disableEMail = function() {
+        if (!$scope.inputDataConfig.reportAccess.mailReportEnabled) {
+            return true;
+        }
+        if ($scope.inputDataConfig.reportAccess.mailReport.mailList.length == 0) {
+            return true;
+        }
+        if ($scope.inputDataConfig.reportAccess.mailReport.subject == undefined) {
+            return true;
+        }
+    }
+
+    $scope.showAlert = function(ev, title, message) {
+        $mdDialog.show(
+            $mdDialog.alert()
+            .parent(angular.element(document.querySelector('body')))
+            .clickOutsideToClose(true)
+            .title(title)
+            .content(message)
+            .ariaLabel('Alert Dialog Demo')
+            .ok('Ok')
+            .targetEvent(ev)
+        );
+    };
+
+    $scope.getScheduleConfig = function(event, jobName) {
+        if ($scope.inputDataConfig.report.name == undefined || $scope.inputDataConfig.report.name.length == 0) {
+            $scope.showAlert(event, "Error", "Enter a valid schedule name");
+            return;
+        }
+
+        $scope.showLoading();
+        var promise = esReportFactory.getScheduleConfig($scope.inputDataConfig.report.name);
+        promise.then(function(response) {
+            if (response.statusMessageCode == 0) {
+                $scope.showAlert(event, "Error", response.statusMessage);
+            } else {
+                $scope.inputDataConfig = JSON.parse(response.statusMessage);
+                console.log(JSON.stringify($scope.inputDataConfig))
+                $scope.typeList = $scope.indexTypeMapping[$scope.inputDataConfig.elasticsearch.index]
+                if (jobName != undefined) {
+                    $scope.getESFieldList($scope.inputDataConfig.elasticsearch.index, $scope.inputDataConfig.elasticsearch.type)
+                }
+                $scope.showSimpleToast("Successfully loaded job " + $scope.inputDataConfig.report.name);
+            }
+        }).catch(function() {
+            console.log("error");
+        }).finally(function() {
+            $scope.hideLoading();
+        });
+    }
+
+    $scope.showSimpleToast = function(content) {
+        $mdToast.show(
+            $mdToast.simple()
+            .content(content)
+            .position($scope.getToastPosition())
+            .hideDelay(3000)
+        );
+    };
+
+    var last = {
+        bottom: false,
+        top: true,
+        left: false,
+        right: true
+    };
+    $scope.toastPosition = angular.extend({}, last);
+
+    $scope.getToastPosition = function() {
+        $scope.sanitizePosition();
+        return Object.keys($scope.toastPosition).filter(function(pos) {
+            return $scope.toastPosition[pos];
+        }).join(' ');
+    };
+
+    $scope.sanitizePosition = function() {
+        var current = $scope.toastPosition;
+        if (current.bottom && last.top) current.top = false;
+        if (current.top && last.bottom) current.bottom = false;
+        if (current.right && last.left) current.left = false;
+        if (current.left && last.right) current.right = false;
+        last = angular.extend({}, current);
+    }
+
+    $scope.init();
+});
+</script>
+
+</html>

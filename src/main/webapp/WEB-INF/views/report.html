@@ -123,7 +123,7 @@
                 <div>
                     <div>
                         <div class="category">
-                            Config
+                            Excel Column Configuration
                             <md-icon ng-click="addEmptyConfig()" md-font-library="material-icons" style="float: right;margin-right: 20px;color: #2196F3;">
                                 <md-tooltip md-direction="bottom"> Add Column
                                 </md-tooltip>add_circle</md-icon>
@@ -135,7 +135,7 @@
                         <table style="width: 100%;" class="table table-bordered" id="configTable">
                             <thead>
                                 <tr>
-                                    <th>#</th>
+                                    <th style="width:40px;">#</th>
                                     <th>Title</th>
                                     <th>Expression</th>
                                     <th>-</th>
@@ -144,7 +144,7 @@
                             <tbody>
                                 <tr ng-repeat="config in inputDataConfig.reportColumnConfig track by $index">
                                     <ng-form name="configForm{{$index}}">
-                                        <td>{{$index+1}}</td>
+                                        <td style="width:40px;">{{$index+1}}</td>
                                         <td>
                                             <md-input-container flex>
                                                 <label>Title</label>

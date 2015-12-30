@@ -98,7 +98,7 @@ public class ESReport {
 		String jarPath = System.getProperties().getProperty("user.dir");
 
 		try {
-			InputStream input = new FileInputStream(jarPath + "\\properties\\esreport.properties");
+			InputStream input = new FileInputStream(jarPath + "\\properties\\elastictab.properties");
 			prop.load(input);
 		} catch (IOException e) {
 			e.printStackTrace();

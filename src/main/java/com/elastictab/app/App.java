@@ -3,7 +3,7 @@ package com.elastictab.app;
 public class App {
 	public static void main(String[] args) {
 		String jarPath = System.getProperties().getProperty("user.dir");
-		System.out.println("Property files laoded from the path " + jarPath);
+		System.out.println("Property files loaded from the path " + jarPath);
 		
 		JettyServerEmbedded jettyServerEmbedded = new JettyServerEmbedded(jarPath + "\\properties\\jetty.properties");
 		jettyServerEmbedded.start();

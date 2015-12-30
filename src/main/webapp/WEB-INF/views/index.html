@@ -1,4 +1,4 @@
-<html ng-app="esReportApp">
+<html ng-app="ElasticTabApp">
 
 <head>
     <title>ElasticTab - Elasticsearch to Excel Report</title>
@@ -33,7 +33,7 @@
     <div ng-view></div>
 </body>
 <script type="text/javascript">
-var app = angular.module('esReportApp', ['ngRoute', 'ngMaterial', 'ngMessages', 'ui', 'ui', 'md.data.table', 'ngclipboard']);
+var app = angular.module('ElasticTabApp', ['ngRoute', 'ngMaterial', 'ngMessages', 'ui', 'md.data.table', 'ngclipboard']);
 
 app.config(['$routeProvider', function($routeProvider) {
     $routeProvider.when('/', {

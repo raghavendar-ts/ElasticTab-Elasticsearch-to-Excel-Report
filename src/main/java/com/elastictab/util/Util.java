@@ -18,7 +18,6 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.elasticsearch.action.admin.cluster.state.ClusterStateResponse;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsRequest;
 import org.elasticsearch.action.admin.indices.mapping.get.GetMappingsResponse;
-import org.elasticsearch.client.Client;
 import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.metadata.AliasMetaData;
 import org.elasticsearch.cluster.metadata.IndexMetaData;
@@ -29,35 +28,18 @@ import org.json.JSONObject;
 import org.quartz.CronExpression;
 
 import com.elastictab.model.InputDataConfig;
+import com.elastictab.report.ESReport;
 
 public class Util {
 
-	public static boolean isPortAvailable(String hostname, int port) {
-		Socket s = null;
-		try {
-			s = new Socket(hostname, port);
-			return false;
-		} catch (IOException e) {
-			return true;
-		} finally {
-			if (s != null) {
-				try {
-					s.close();
-				} catch (IOException e) {
-					throw new RuntimeException("You should handle this error.", e);
-				}
-			}
-		}
-	}
-
-	public static List<String> getESFields(Client esClient, String index, String type) {
+	public static List<String> getESFields(String index, String type) {
 		List<String> fieldList = new ArrayList<String>();
-		boolean indexExist = esClient.admin().indices().prepareExists(index).execute().actionGet().isExists();
-		ClusterStateResponse resp = esClient.admin().cluster().prepareState().execute().actionGet();
+		boolean indexExist = ESReport.getESClient().admin().indices().prepareExists(index).execute().actionGet().isExists();
+		ClusterStateResponse resp = ESReport.getESClient().admin().cluster().prepareState().execute().actionGet();
 		boolean typeExist = resp.getState().metaData().index(index).mappings().containsKey(type);
 
 		if (indexExist && typeExist) {
-			ClusterState cs = esClient.admin().cluster().prepareState().setIndices(index).execute().actionGet().getState();
+			ClusterState cs = ESReport.getESClient().admin().cluster().prepareState().setIndices(index).execute().actionGet().getState();
 			IndexMetaData imd = cs.getMetaData().index(index);
 			MappingMetaData mdd = imd.mapping(type);
 			Map<String, Object> map = null;
@@ -86,14 +68,14 @@ public class Util {
 		return fieldList;
 	}
 
-	public static List<String> getESIndexList(Client esClient) {
-		String[] indexList = esClient.admin().cluster().prepareState().execute().actionGet().getState().getMetaData().concreteAllIndices();
+	public static List<String> getESIndexList() {
+		String[] indexList = ESReport.getESClient().admin().cluster().prepareState().execute().actionGet().getState().getMetaData().concreteAllIndices();
 		return Arrays.asList(indexList);
 	}
 
-	public static List<String> getESAliasList(Client esClient) {
+	public static List<String> getESAliasList() {
 		List<String> aliasList = new ArrayList<String>();
-		ImmutableOpenMap<String, ImmutableOpenMap<String, AliasMetaData>> object = esClient.admin().cluster().prepareState().execute().actionGet().getState().getMetaData().getAliases();
+		ImmutableOpenMap<String, ImmutableOpenMap<String, AliasMetaData>> object = ESReport.getESClient().admin().cluster().prepareState().execute().actionGet().getState().getMetaData().getAliases();
 		Object[] aliasKeyObjectArray = object.keys().toArray();
 
 		for (Object aliasObject : aliasKeyObjectArray) {
@@ -102,11 +84,10 @@ public class Util {
 		return aliasList;
 	}
 
-	public static List<String> getTypeListFromIndex(Client esClient, String index) {
+	public static List<String> getTypeListFromIndex(String index) {
 		List<String> typeList = new ArrayList<String>();
-
 		try {
-			GetMappingsResponse res = esClient.admin().indices().getMappings(new GetMappingsRequest().indices(index)).get();
+			GetMappingsResponse res = ESReport.getESClient().admin().indices().getMappings(new GetMappingsRequest().indices(index)).get();
 			ImmutableOpenMap<String, MappingMetaData> mapping = res.mappings().get(index);
 			for (ObjectObjectCursor<String, MappingMetaData> c : mapping) {
 				typeList.add(c.key);
@@ -119,12 +100,11 @@ public class Util {
 		return typeList;
 	}
 
-	public static Map<String, List<String>> getIndexTypeMapping(Client esClient) {
-
+	public static Map<String, List<String>> getIndexTypeMapping() {
 		Map<String, List<String>> indexTypeMapping = new HashMap<String, List<String>>();
 		List<String> typeList = null;
 
-		ImmutableOpenMap<String, ImmutableOpenMap<String, MappingMetaData>> f = esClient.admin().indices().getMappings(new GetMappingsRequest()).actionGet().getMappings();
+		ImmutableOpenMap<String, ImmutableOpenMap<String, MappingMetaData>> f = ESReport.getESClient().admin().indices().getMappings(new GetMappingsRequest()).actionGet().getMappings();
 
 		Object[] indexList = f.keys().toArray();
 		for (Object indexObj : indexList) {

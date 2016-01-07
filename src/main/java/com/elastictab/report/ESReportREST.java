@@ -34,19 +34,15 @@ import com.elastictab.util.Util;
 @Path("/esreport")
 public class ESReportREST {
 
-	@Context
-	private ServletContext context;
-
 	@POST
 	@Path("report")
 	@Produces(MediaType.APPLICATION_JSON)
 	@Consumes(MediaType.APPLICATION_JSON)
 	public String report(InputDataConfig inputDataConfig) {
-		Client esClient = (Client) context.getAttribute(Constants.ES_CLIENT);
 		ESReport esReport = new ESReport();
 		esReport.setData(inputDataConfig);
 		try {
-			Workbook wb = esReport.process(esClient);
+			Workbook wb = esReport.process();
 		} catch (MessagingException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
@@ -59,7 +55,6 @@ public class ESReportREST {
 	@Path("download")
 	@Produces(MediaType.APPLICATION_OCTET_STREAM)
 	public Response reportString(@FormParam("inputDataConfigString") String inputDataConfigString) {
-		Client esClient = (Client) context.getAttribute(Constants.ES_CLIENT);
 		InputDataConfig inputDataConfig = ObjectConversionUtil.stringToPOJO(inputDataConfigString);
 
 		ESReport esReport = new ESReport();
@@ -67,7 +62,7 @@ public class ESReportREST {
 
 		Workbook wb = null;
 		try {
-			wb = esReport.process(esClient);
+			wb = esReport.process();
 		} catch (MessagingException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
@@ -114,7 +109,6 @@ public class ESReportREST {
 	@Produces(MediaType.APPLICATION_JSON)
 	@Consumes(MediaType.APPLICATION_JSON)
 	public String mailReport(InputDataConfig inputDataConfig) {
-		Client esClient = (Client) context.getAttribute(Constants.ES_CLIENT);
 		JSONObject response = new JSONObject();
 
 		response = Util.validate(inputDataConfig);
@@ -128,7 +122,7 @@ public class ESReportREST {
 		ESReport esReport = new ESReport();
 		esReport.setData(inputDataConfig);
 		try {
-			Workbook wb = esReport.process(esClient);
+			Workbook wb = esReport.process();
 			response.put(Constants.STATUS_CODE, 1);
 			response.put(Constants.STATUS_MESSAGE, "Mail sent successfully");
 		} catch (MessagingException e) {
@@ -287,14 +281,9 @@ public class ESReportREST {
 	@Produces(MediaType.APPLICATION_JSON)
 	@Consumes(MediaType.APPLICATION_JSON)
 	public List<String> getESFieldList(Map<String, String> input) {
-
-		Client esClient = (Client) context.getAttribute(Constants.ES_CLIENT);
-
 		String index = input.get(Constants.INDEX);
 		String type = input.get(Constants.TYPE);
-
-		return Util.getESFields(esClient, index, type);
-
+		return Util.getESFields(index, type);
 	}
 
 	@POST
@@ -303,8 +292,7 @@ public class ESReportREST {
 	@Consumes(MediaType.APPLICATION_JSON)
 	public List<String> getTypeListFromIndex(Map<String, String> input) {
 		String index = input.get(Constants.INDEX);
-		Client esClient = (Client) context.getAttribute(Constants.ES_CLIENT);
-		return Util.getTypeListFromIndex(esClient, index);
+		return Util.getTypeListFromIndex(index);
 	}
 
 	@GET
@@ -312,12 +300,10 @@ public class ESReportREST {
 	@Produces(MediaType.APPLICATION_JSON)
 	@Consumes(MediaType.APPLICATION_JSON)
 	public Map<String, Object> getIndexTypeMapping() {
-		Client esClient = (Client) context.getAttribute(Constants.ES_CLIENT);
 		Map<String, Object> response = new HashMap<String, Object>();
-		response.put("indexTypeMapping", Util.getIndexTypeMapping(esClient));
-		response.put("aliasList", Util.getESAliasList(esClient));
-		response.put("indexList", Util.getESIndexList(esClient));
-
+		response.put("indexTypeMapping", Util.getIndexTypeMapping());
+		response.put("aliasList", Util.getESAliasList());
+		response.put("indexList", Util.getESIndexList());
 		return response;
 	}
 

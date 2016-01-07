@@ -32,22 +32,22 @@ import com.elastictab.model.TriggerData;
 import com.elastictab.report.ESReportJob;
 
 public class QuartzUtil {
+
+	static Scheduler scheduler;
 	static Properties quartzClientProperties = new Properties();
 
-	static Scheduler getScheduler() {
+	public static void initializeSchedulerClient() {
 		String jarPath = System.getProperties().getProperty("user.dir");
-
-		Scheduler scheduler = null;
 		try {
 			InputStream input = new FileInputStream(jarPath + "\\properties\\quartzClient.properties");
 			quartzClientProperties.load(input);
 			scheduler = new StdSchedulerFactory(quartzClientProperties).getScheduler();
+			System.out.println("Scheduler Client Initialized");
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (SchedulerException e) {
 			e.printStackTrace();
 		}
-		return scheduler;
 	}
 
 	public static void createSchedule(InputDataConfig inputDataConfig) throws SchedulerException {
@@ -68,7 +68,7 @@ public class QuartzUtil {
 			triggerList.add(trigger);
 
 		}
-		getScheduler().scheduleJob(job, triggerList, false);
+		scheduler.scheduleJob(job, triggerList, false);
 	}
 
 	public static void updateScheduleReport(InputDataConfig inputDataConfig) throws SchedulerException {
@@ -89,19 +89,19 @@ public class QuartzUtil {
 			triggerList.add(trigger);
 
 		}
-		getScheduler().scheduleJob(job, triggerList, true);
+		scheduler.scheduleJob(job, triggerList, true);
 	}
 
 	public static List<JobData> listJobs() throws SchedulerException {
 		List<JobData> jobDataList = new ArrayList<JobData>();
 
-		for (String group : getScheduler().getJobGroupNames()) {
+		for (String group : scheduler.getJobGroupNames()) {
 
-			for (JobKey jobKey : getScheduler().getJobKeys(GroupMatcher.jobGroupEquals(group))) {
+			for (JobKey jobKey : scheduler.getJobKeys(GroupMatcher.jobGroupEquals(group))) {
 				JobData jobData = new JobData();
 				jobData.setName(jobKey.getName());
 
-				List<Trigger> triggers = (List<Trigger>) getScheduler().getTriggersOfJob(jobKey);
+				List<Trigger> triggers = (List<Trigger>) scheduler.getTriggersOfJob(jobKey);
 
 				List<TriggerData> triggerDataList = new ArrayList<TriggerData>();
 
@@ -112,7 +112,7 @@ public class QuartzUtil {
 					triggerData.setCronExpression(((CronTrigger) trigger).getCronExpression());
 					triggerData.setNextFireTime(trigger.getNextFireTime());
 					triggerData.setPreviousFireTime(trigger.getPreviousFireTime());
-					triggerData.setTriggerState(getScheduler().getTriggerState(new TriggerKey(trigger.getKey().getName(), quartzClientProperties.getProperty("group"))));
+					triggerData.setTriggerState(scheduler.getTriggerState(new TriggerKey(trigger.getKey().getName(), quartzClientProperties.getProperty("group"))));
 
 					triggerDataList.add(triggerData);
 				}
@@ -125,29 +125,28 @@ public class QuartzUtil {
 
 	public static TriggerState updateJobState(String jobName, String triggerName, boolean triggerState) throws SchedulerException {
 		if (triggerState) {
-			getScheduler().resumeTrigger(new TriggerKey(triggerName, quartzClientProperties.getProperty("group")));
+			scheduler.resumeTrigger(new TriggerKey(triggerName, quartzClientProperties.getProperty("group")));
 		} else {
-			getScheduler().pauseTrigger(new TriggerKey(triggerName, quartzClientProperties.getProperty("group")));
+			scheduler.pauseTrigger(new TriggerKey(triggerName, quartzClientProperties.getProperty("group")));
 		}
-		return getScheduler().getTriggerState(new TriggerKey(triggerName, quartzClientProperties.getProperty("group")));
-
+		return scheduler.getTriggerState(new TriggerKey(triggerName, quartzClientProperties.getProperty("group")));
 	}
 
 	public static boolean deleteJob(String jobName) throws SchedulerException {
-		return getScheduler().deleteJob(new JobKey(jobName, quartzClientProperties.getProperty("group")));
+		return scheduler.deleteJob(new JobKey(jobName, quartzClientProperties.getProperty("group")));
 	}
 
 	public static boolean jobExist(String jobName) throws SchedulerException {
-		return getScheduler().checkExists(new JobKey(jobName, quartzClientProperties.getProperty("group")));
+		return scheduler.checkExists(new JobKey(jobName, quartzClientProperties.getProperty("group")));
 	}
 
 	public static String getJobData(String reportName) throws SchedulerException {
-		Map<String, Object> jobData = getScheduler().getJobDetail(new JobKey(reportName, quartzClientProperties.getProperty("group"))).getJobDataMap();
+		Map<String, Object> jobData = scheduler.getJobDetail(new JobKey(reportName, quartzClientProperties.getProperty("group"))).getJobDataMap();
 		return ObjectConversionUtil.MapToJSONString(jobData);
 	}
 
 	public static void triggerJob(String jobName) throws SchedulerException {
 		JobKey jobKey = new JobKey(jobName, quartzClientProperties.getProperty("group"));
-		getScheduler().triggerJob(jobKey);
+		scheduler.triggerJob(jobKey);
 	}
 }

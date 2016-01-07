@@ -1,10 +1,13 @@
 package com.elastictab.app;
 
+import com.elastictab.report.ESReport;
+import com.elastictab.util.QuartzUtil;
+
 public class App {
 	public static void main(String[] args) {
 		String jarPath = System.getProperties().getProperty("user.dir");
 		System.out.println("Property files loaded from the path " + jarPath);
-		
+
 		JettyServerEmbedded jettyServerEmbedded = new JettyServerEmbedded(jarPath + "\\properties\\jetty.properties");
 		jettyServerEmbedded.start();
 
@@ -12,5 +15,14 @@ public class App {
 
 		QuartzServerEmbedded quartzServerEmbedded = new QuartzServerEmbedded(jarPath + "\\properties\\quartzServer.properties");
 		quartzServerEmbedded.start();
+		try {
+			Thread.sleep(Long.valueOf(args[0]));
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
+		QuartzUtil.initializeSchedulerClient();
+		ESReport.initializeESClient();
+		System.out.println("**************************ElasticTab Started**************************");
 	}
 }

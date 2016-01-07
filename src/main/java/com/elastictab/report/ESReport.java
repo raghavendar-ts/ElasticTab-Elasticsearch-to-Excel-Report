@@ -55,6 +55,39 @@ import com.elastictab.util.Constants;
 import com.elastictab.util.MailUtil;
 
 public class ESReport {
+
+	static Client esClient;
+
+	public static void initializeESClient() {
+		String hostname = "localhost";
+		String jarPath = System.getProperties().getProperty("user.dir");
+
+		Properties properties = new Properties();
+		try {
+			InputStream input = new FileInputStream(jarPath + "\\properties\\elasticsearch.properties");
+			properties.load(input);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		if (!properties.get("hostname").equals(null) && !properties.get("hostname").equals("")) {
+			hostname = (String) properties.get("hostname");
+		}
+
+		Builder builder = ImmutableSettings.settingsBuilder();
+		builder.put("client.transport.sniff", true);
+		if (!properties.get("clustername").equals(null) && !properties.get("clustername").equals("")) {
+			builder.put("cluster.name", (String) properties.get("clustername"));
+		}
+
+		Settings settings = builder.build();
+		esClient = new TransportClient(settings).addTransportAddress(new InetSocketTransportAddress(hostname, 9300));
+	}
+
+	public static Client getESClient() {
+		return esClient;
+	}
+
 	Properties prop = new Properties();
 
 	int i = 0;
@@ -173,47 +206,12 @@ public class ESReport {
 	}
 
 	public Workbook process() throws MessagingException, IOException {
-		Client esClient = getESClient();
-		Workbook wb = createWorkbook(esClient);
+		Workbook wb = createWorkbook();
 		reportAccess(wb);
 		return wb;
 	}
 
-	private Client getESClient() {
-
-		String jarPath = System.getProperties().getProperty("user.dir");
-
-		String hostname = "localhost";
-		Properties properties = new Properties();
-		try {
-			InputStream input = new FileInputStream(jarPath + "\\properties\\elasticsearch.properties");
-			properties.load(input);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		if (!properties.get("hostname").equals(null) && !properties.get("hostname").equals("")) {
-			hostname = (String) properties.get("hostname");
-		}
-
-		Builder builder = ImmutableSettings.settingsBuilder();
-		builder.put("client.transport.sniff", true);
-		if (!properties.get("clustername").equals(null) && !properties.get("clustername").equals("")) {
-			builder.put("cluster.name", (String) properties.get("clustername"));
-		}
-
-		Settings settings = builder.build();
-		Client esClient = new TransportClient(settings).addTransportAddress(new InetSocketTransportAddress(hostname, 9300));
-		return esClient;
-	}
-
-	public Workbook process(Client esClient) throws MessagingException, IOException {
-		Workbook wb = createWorkbook(esClient);
-		reportAccess(wb);
-		return wb;
-	}
-
-	private Workbook createWorkbook(Client esClient) {
+	private Workbook createWorkbook() {
 		i = 0;
 		System.out.println("Process Started");
 		sheet = wb.createSheet(inputDataConfig.getReport().getName());
@@ -286,7 +284,6 @@ public class ESReport {
 	}
 
 	private void buildDataLayout(SearchHits hits) {
-		System.out.println("buildDataLayout");
 		// For each row
 		for (int i = 0; i < hits.getHits().length; i++) {
 			// Row n

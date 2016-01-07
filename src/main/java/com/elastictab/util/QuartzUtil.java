@@ -3,6 +3,7 @@ package com.elastictab.util;
 import static org.quartz.JobBuilder.newJob;
 import static org.quartz.TriggerBuilder.newTrigger;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -39,7 +40,7 @@ public class QuartzUtil {
 	public static void initializeSchedulerClient() {
 		String jarPath = System.getProperties().getProperty("user.dir");
 		try {
-			InputStream input = new FileInputStream(jarPath + "\\properties\\quartzClient.properties");
+			InputStream input = new FileInputStream(jarPath + File.separatorChar + "properties" + File.separatorChar + "quartzClient.properties");
 			quartzClientProperties.load(input);
 			scheduler = new StdSchedulerFactory(quartzClientProperties).getScheduler();
 			System.out.println("Scheduler Client Initialized");

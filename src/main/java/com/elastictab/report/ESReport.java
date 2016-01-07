@@ -1,5 +1,6 @@
 package com.elastictab.report;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -64,7 +65,7 @@ public class ESReport {
 
 		Properties properties = new Properties();
 		try {
-			InputStream input = new FileInputStream(jarPath + "\\properties\\elasticsearch.properties");
+			InputStream input = new FileInputStream(jarPath + File.separatorChar + "properties" + File.separatorChar + "elasticsearch.properties");
 			properties.load(input);
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -131,7 +132,7 @@ public class ESReport {
 		String jarPath = System.getProperties().getProperty("user.dir");
 
 		try {
-			InputStream input = new FileInputStream(jarPath + "\\properties\\elastictab.properties");
+			InputStream input = new FileInputStream(jarPath + File.separatorChar + "properties" + File.separatorChar + "elastictab.properties");
 			prop.load(input);
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -583,7 +584,7 @@ public class ESReport {
 	public void reportAccessTypeFile(Workbook localWB, String reportSavePath, String filename) {
 		FileOutputStream out;
 		try {
-			out = new FileOutputStream(reportSavePath + "//" + filename + ".xls");
+			out = new FileOutputStream(reportSavePath + File.separatorChar + filename + ".xls");
 			localWB.write(out);
 			out.close();
 		} catch (FileNotFoundException e) {

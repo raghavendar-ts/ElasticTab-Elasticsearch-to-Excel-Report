@@ -19,8 +19,5 @@
 	<servlet-mapping>
 		<servlet-name>Jersey Web Application</servlet-name>
 		<url-pattern>/API/*</url-pattern>
-	</servlet-mapping>
-	<listener>
-		<listener-class>com.elastictab.app.LoadConfigurationListener</listener-class>
-	</listener>
+	</servlet-mapping>	
 </web-app>

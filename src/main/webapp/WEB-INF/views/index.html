@@ -33,7 +33,7 @@
     <div ng-view></div>
 </body>
 <script type="text/javascript">
-var app = angular.module('ElasticTabApp', ['ngRoute', 'ngMaterial', 'ngMessages', 'ui', 'md.data.table', 'ngclipboard']);
+var app = angular.module('ElasticTabApp', ['ngRoute', 'ngMaterial', 'ngMessages', 'ui',  'md.data.table', 'ngclipboard']);
 
 app.config(['$routeProvider', function($routeProvider) {
     $routeProvider.when('/', {
@@ -466,7 +466,7 @@ app.controller('reportController', function($q, $scope, $mdDialog, $mdToast, $ro
             $scope.showLoading();
             var promise = esReportFactory.scheduleReport($scope.inputDataConfig);
             promise.then(function(response) {
-                if (response.statusMessageCode == 0) {
+                if (response.statusCode == 0) {
                     $scope.showAlert(event, "Error", response.statusMessage);
                 } else {
                     $scope.showSimpleToast(response.statusMessage);
@@ -491,7 +491,7 @@ app.controller('reportController', function($q, $scope, $mdDialog, $mdToast, $ro
             $scope.showLoading();
             var promise = esReportFactory.updateScheduleReport($scope.inputDataConfig);
             promise.then(function(response) {
-                if (response.statusMessageCode == 0) {
+                if (response.statusCode == 0) {
                     $scope.showAlert(event, "Error", response.statusMessage);
                 } else {
                     $scope.showSimpleToast("job " + $scope.inputDataConfig.report.name + " updated successfully");
@@ -515,7 +515,7 @@ app.controller('reportController', function($q, $scope, $mdDialog, $mdToast, $ro
             $scope.showLoading();
             var promise = esReportFactory.mailReport($scope.inputDataConfig);
             promise.then(function(response) {
-                if (response.statusMessageCode == 0) {
+                if (response.statusCode == 0) {
                     $scope.showAlert(event, "Error", response.statusMessage);
                 } else {
                     $scope.showSimpleToast(response.statusMessage);
@@ -594,7 +594,7 @@ app.controller('reportController', function($q, $scope, $mdDialog, $mdToast, $ro
         $scope.showLoading();
         var promise = esReportFactory.getScheduleConfig($scope.inputDataConfig.report.name);
         promise.then(function(response) {
-            if (response.statusMessageCode == 0) {
+            if (response.statusCode == 0) {
                 $scope.showAlert(event, "Error", response.statusMessage);
             } else {
                 $scope.inputDataConfig = JSON.parse(response.statusMessage);

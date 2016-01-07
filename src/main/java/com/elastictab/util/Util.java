@@ -133,9 +133,10 @@ public class Util {
 		for (String mailID : mailIDList) {
 			try {
 				InternetAddress emailAddr = new InternetAddress(mailID);
+				emailAddr.validate();
 			} catch (AddressException e) {
 				response.put(Constants.STATUS_CODE, 0);
-				response.put(Constants.STATUS_MESSAGE, mailID + "is not a valid E-Mail ID");
+				response.put(Constants.STATUS_MESSAGE, mailID + " is not a valid E-Mail ID");
 				return response;
 			}
 		}

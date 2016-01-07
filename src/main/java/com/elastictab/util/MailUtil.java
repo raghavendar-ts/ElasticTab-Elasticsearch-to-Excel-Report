@@ -1,6 +1,7 @@
 package com.elastictab.util;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.List;
@@ -35,7 +36,7 @@ public class MailUtil {
 		try {
 			String jarPath = System.getProperties().getProperty("user.dir");
 
-			mailProperties.load(new FileInputStream(jarPath + "\\properties\\mail.properties"));
+			mailProperties.load(new FileInputStream(jarPath + File.separatorChar + "properties" + File.separatorChar + "mail.properties"));
 			session = Session.getInstance(mailProperties, null);
 		} catch (IOException e) {
 			e.printStackTrace();

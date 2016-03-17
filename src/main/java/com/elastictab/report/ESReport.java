@@ -6,6 +6,8 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.text.DecimalFormat;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
@@ -40,9 +42,8 @@ import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.client.transport.TransportClient;
-import org.elasticsearch.common.settings.ImmutableSettings;
-import org.elasticsearch.common.settings.ImmutableSettings.Builder;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.settings.Settings.Builder;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.search.SearchHitField;
 import org.elasticsearch.search.SearchHits;
@@ -75,14 +76,21 @@ public class ESReport {
 			hostname = (String) properties.get("hostname");
 		}
 
-		Builder builder = ImmutableSettings.settingsBuilder();
+		//Builder builder = ImmutableSettings.settingsBuilder();
+		Builder builder = Settings.settingsBuilder();
+		
+		
 		builder.put("client.transport.sniff", true);
 		if (!properties.get("clustername").equals(null) && !properties.get("clustername").equals("")) {
 			builder.put("cluster.name", (String) properties.get("clustername"));
 		}
 
-		Settings settings = builder.build();
-		esClient = new TransportClient(settings).addTransportAddress(new InetSocketTransportAddress(hostname, 9300));
+		Settings settings = builder.build();		
+		try {
+			esClient = TransportClient.builder().settings(settings).build().addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(hostname), 9300));
+		} catch (UnknownHostException e) {
+			e.printStackTrace();
+		}
 	}
 
 	public static Client getESClient() {

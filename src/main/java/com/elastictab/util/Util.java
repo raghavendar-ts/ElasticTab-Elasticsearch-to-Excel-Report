@@ -23,10 +23,11 @@ import org.elasticsearch.cluster.metadata.AliasMetaData;
 import org.elasticsearch.cluster.metadata.IndexMetaData;
 import org.elasticsearch.cluster.metadata.MappingMetaData;
 import org.elasticsearch.common.collect.ImmutableOpenMap;
-import org.elasticsearch.common.hppc.cursors.ObjectObjectCursor;
 import org.json.JSONObject;
 import org.quartz.CronExpression;
 
+import com.carrotsearch.hppc.ObjectLookupContainer;
+import com.carrotsearch.hppc.cursors.ObjectCursor;
 import com.elastictab.model.InputDataConfig;
 import com.elastictab.report.ESReport;
 
@@ -36,7 +37,9 @@ public class Util {
 		List<String> fieldList = new ArrayList<String>();
 		boolean indexExist = ESReport.getESClient().admin().indices().prepareExists(index).execute().actionGet().isExists();
 		ClusterStateResponse resp = ESReport.getESClient().admin().cluster().prepareState().execute().actionGet();
-		boolean typeExist = resp.getState().metaData().index(index).mappings().containsKey(type);
+		//boolean typeExist = resp.getState().metaData().index(index).mappings().containsKey(type);
+		boolean typeExist = resp.getState().metaData().index(index).getMappings().containsKey(type);
+
 
 		if (indexExist && typeExist) {
 			ClusterState cs = ESReport.getESClient().admin().cluster().prepareState().setIndices(index).execute().actionGet().getState();
@@ -75,27 +78,22 @@ public class Util {
 
 	public static List<String> getESAliasList() {
 		List<String> aliasList = new ArrayList<String>();
-		ImmutableOpenMap<String, ImmutableOpenMap<String, AliasMetaData>> object = ESReport.getESClient().admin().cluster().prepareState().execute().actionGet().getState().getMetaData().getAliases();
-		Object[] aliasKeyObjectArray = object.keys().toArray();
+		ClusterStateResponse resp = ESReport.getESClient().admin().cluster().prepareState().execute().actionGet();
+		Set<String> aliases=resp.getState().metaData().getAliasAndIndexLookup().keySet();
+		for(String alias:aliases){
+			aliasList.add(alias);
 
-		for (Object aliasObject : aliasKeyObjectArray) {
-			aliasList.add(aliasObject.toString());
 		}
 		return aliasList;
 	}
 
 	public static List<String> getTypeListFromIndex(String index) {
 		List<String> typeList = new ArrayList<String>();
-		try {
-			GetMappingsResponse res = ESReport.getESClient().admin().indices().getMappings(new GetMappingsRequest().indices(index)).get();
-			ImmutableOpenMap<String, MappingMetaData> mapping = res.mappings().get(index);
-			for (ObjectObjectCursor<String, MappingMetaData> c : mapping) {
-				typeList.add(c.key);
-			}
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		} catch (ExecutionException e) {
-			e.printStackTrace();
+		ClusterStateResponse resp = ESReport.getESClient().admin().cluster().prepareState().execute().actionGet();
+		ObjectLookupContainer<String> objectLookupContainer = resp.getState().metaData().index(index).getMappings().keys();
+		for(ObjectCursor<String> objectCursor:objectLookupContainer)
+		{
+			typeList.add(objectCursor.value);
 		}
 		return typeList;
 	}
@@ -111,8 +109,11 @@ public class Util {
 			String index = indexObj.toString();
 			ImmutableOpenMap<String, MappingMetaData> mapping = f.get(index);
 			typeList = new ArrayList<String>();
-			for (ObjectObjectCursor<String, MappingMetaData> c : mapping) {
-				typeList.add(c.key);
+			
+			ClusterStateResponse resp = ESReport.getESClient().admin().cluster().prepareState().execute().actionGet();
+			ObjectLookupContainer<String> objectLookupContainer = resp.getState().metaData().index(index).getMappings().keys();
+			for(ObjectCursor<String> objectCursor:objectLookupContainer){
+				typeList.add(objectCursor.value);
 			}
 			indexTypeMapping.put(index, typeList);
 		}

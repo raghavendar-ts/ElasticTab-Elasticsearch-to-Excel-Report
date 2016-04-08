@@ -26,8 +26,8 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.json.JSONArray;
 
 public class MailUtil {
-	Properties mailProperties = new Properties();
-	Session session;
+	static Properties mailProperties = new Properties();
+	static Session session;
 	MimeMessage message;
 	Multipart multipart = new MimeMultipart();
 	BodyPart messageBodyPart = null;
@@ -35,13 +35,15 @@ public class MailUtil {
 	public MailUtil() {
 		try {
 			String jarPath = System.getProperties().getProperty("user.dir");
-
 			mailProperties.load(new FileInputStream(jarPath + File.separatorChar + "properties" + File.separatorChar + "mail.properties"));
 			session = Session.getInstance(mailProperties, null);
 		} catch (IOException e) {
 			e.printStackTrace();
-		}
-		message = new MimeMessage(session);
+		}		
+	}
+	
+	public void initializeMessage() {
+		message = new MimeMessage(session);		
 	}
 
 	public void setFrom(String fromLocal) {
@@ -105,4 +107,6 @@ public class MailUtil {
 		transport.connect(mailProperties.getProperty("username"), mailProperties.getProperty("password"));
 		transport.sendMessage(message, message.getAllRecipients());
 	}
+
+
 }

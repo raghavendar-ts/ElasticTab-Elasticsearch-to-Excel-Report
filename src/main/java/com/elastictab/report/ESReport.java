@@ -59,6 +59,8 @@ import com.elastictab.util.MailUtil;
 public class ESReport {
 
 	static Client esClient;
+	
+	MailUtil mailAPI = new MailUtil();
 
 	public static void initializeESClient() {
 		String hostname = "localhost";
@@ -576,10 +578,10 @@ public class ESReport {
 		}
 	}
 
-	public void reportAccessTypeEMail(Workbook localwb, MailReport email, String fileName) throws MessagingException, IOException {
-		MailUtil mailAPI = new MailUtil();
+	public void reportAccessTypeEMail(Workbook localwb, MailReport email, String fileName) throws MessagingException, IOException {		
 		// mailAPI.setFrom(fromEMail);
 		if (email.getMailList().size() > 0) {
+			mailAPI.initializeMessage();
 			mailAPI.setSubject(email.getSubject());
 			mailAPI.setText(email.getDescription());
 			mailAPI.addRecipients(email.getMailList());

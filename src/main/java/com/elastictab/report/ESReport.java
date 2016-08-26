@@ -9,6 +9,7 @@ import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
@@ -47,6 +48,7 @@ import org.elasticsearch.common.settings.Settings.Builder;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.search.SearchHitField;
 import org.elasticsearch.search.SearchHits;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import com.elastictab.model.FileReport;
@@ -110,6 +112,7 @@ public class ESReport {
 	CellStyle dataStyle;
 	CellStyle titleStyle;
 	CellStyle headerStyle;
+	String[] fields;
 
 	ScriptEngineManager mgr = new ScriptEngineManager();
 	ScriptEngine engine = mgr.getEngineByName("JavaScript");
@@ -178,6 +181,8 @@ public class ESReport {
 			}
 		}
 		queryObj = new JSONObject(inputDataConfig.getElasticsearch().getQuery());
+		
+		fields = getFields(queryObj.getJSONArray(Constants.FIELDS));
 
 		initializeDefaultParameters();
 	}
@@ -244,11 +249,16 @@ public class ESReport {
 			if (inputDataConfig.getElasticsearch().getRouting() != null) {
 				searchRequestBuilder.setRouting((String[]) inputDataConfig.getElasticsearch().getRouting().toArray());
 			}
+			
+			searchRequestBuilder.setFrom(queryObj.getInt("from"));
+			searchRequestBuilder.setSize(inputDataConfig.getElasticsearch().getBatchSize());
+			searchRequestBuilder.addFields(fields);
 
 			response = searchRequestBuilder.execute().actionGet();
 
 			SearchHits hits = response.getHits();
 			hitscount = hits.totalHits();
+	
 			buildDataLayout(hits);
 			System.out.println("Processed " + Integer.valueOf((inputDataConfig.getElasticsearch().getBatchSize() * k) + inputDataConfig.getElasticsearch().getBatchSize()) + " of " + hitscount);
 			k++;
@@ -258,6 +268,14 @@ public class ESReport {
 		formatExcelSheet();
 
 		return wb;
+	}
+
+	private static String[] getFields(JSONArray jsonArray) {
+		String[] fields = new String[jsonArray.length()];
+		for(int i=0;i<jsonArray.length();i++){
+			fields[i]=jsonArray.getString(i);			
+		}
+		return fields;
 	}
 
 	private void setTitle() {
@@ -304,7 +322,7 @@ public class ESReport {
 				ReportColumnConfig reportColumnConfig = reportColumnConfigList.get(j);
 				String format = reportColumnConfig.getExpression();
 				format = getExprValue(responseFields, format);
-
+	
 				cell = row.createCell((short) j);
 				cell.setCellValue(format);
 			}

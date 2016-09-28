@@ -17,6 +17,7 @@ public class Constants {
 
 	public static String INDEX = "index";
 	public static String TYPE = "type";
+	public static String FIELDS = "fields";
 
 	public static String[] queries = {
 			"CREATE TABLE IF NOT EXISTS QRTZ_CALENDARS (SCHED_NAME VARCHAR(120) NOT NULL,CALENDAR_NAME VARCHAR (200)  NOT NULL , CALENDAR IMAGE NOT NULL)",

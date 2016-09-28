@@ -9,7 +9,6 @@ import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.text.DecimalFormat;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
@@ -27,7 +26,6 @@ import javax.script.ScriptException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.hssf.usermodel.HSSFCellStyle;
 import org.apache.poi.hssf.usermodel.HSSFFont;
-import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.hssf.util.HSSFColor;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
@@ -35,6 +33,7 @@ import org.apache.poi.ss.usermodel.Font;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
@@ -46,6 +45,8 @@ import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.Settings.Builder;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
+import org.elasticsearch.common.unit.TimeValue;
+import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHitField;
 import org.elasticsearch.search.SearchHits;
 import org.json.JSONArray;
@@ -104,7 +105,7 @@ public class ESReport {
 	Properties prop = new Properties();
 
 	int i = 0;
-	Workbook wb = new HSSFWorkbook();
+	Workbook wb = new XSSFWorkbook();
 	Sheet sheet;
 	Row row;
 	Cell cell;
@@ -236,6 +237,37 @@ public class ESReport {
 		setHeaders();
 
 		System.out.println("Building Excel Report");
+		SearchResponse response = null;
+
+		String index = inputDataConfig.getElasticsearch().getIndex();
+		if (inputDataConfig.getElasticsearch().isUseAlias()) {
+			index = inputDataConfig.getElasticsearch().getAlias();
+		}
+		SearchRequestBuilder searchRequestBuilder = esClient.prepareSearch(index).setTypes(inputDataConfig.getElasticsearch().getType()).setSource(queryObj.toString());
+		if (inputDataConfig.getElasticsearch().getRouting() != null) {
+			searchRequestBuilder.setRouting((String[]) inputDataConfig.getElasticsearch().getRouting().toArray());
+		}
+		
+		//searchRequestBuilder.setFrom(queryObj.getInt("from"));
+		searchRequestBuilder.setScroll(new TimeValue(60000));
+		searchRequestBuilder.setSize(inputDataConfig.getElasticsearch().getBatchSize());
+		searchRequestBuilder.addFields(fields);
+
+		response = searchRequestBuilder.execute().actionGet();
+		while (true) {
+			SearchHits hits = response.getHits();
+			hitscount = hits.totalHits();
+			buildDataLayout(hits);
+			
+			System.out.println("Processed " + Integer.valueOf((inputDataConfig.getElasticsearch().getBatchSize() * k) + inputDataConfig.getElasticsearch().getBatchSize()) + " of " + hitscount);
+			k++;
+			response = esClient.prepareSearchScroll(response.getScrollId()).setScroll(new TimeValue(60000)).execute().actionGet();
+		    if (response.getHits().getHits().length == 0) {
+		        break;
+		    }
+		}
+		
+		/*
 		do {
 			queryObj.put("from", inputDataConfig.getElasticsearch().getBatchSize() * k);
 			SearchResponse response = null;
@@ -265,6 +297,7 @@ public class ESReport {
 			rows_fetched = inputDataConfig.getElasticsearch().getBatchSize() * k;
 		} while (rows_fetched < hitscount);
 		System.out.println("Finished processing data");
+		*/
 		formatExcelSheet();
 
 		return wb;

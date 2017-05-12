@@ -37,9 +37,7 @@ public class Util {
 		List<String> fieldList = new ArrayList<String>();
 		boolean indexExist = ESReport.getESClient().admin().indices().prepareExists(index).execute().actionGet().isExists();
 		ClusterStateResponse resp = ESReport.getESClient().admin().cluster().prepareState().execute().actionGet();
-		//boolean typeExist = resp.getState().metaData().index(index).mappings().containsKey(type);
 		boolean typeExist = resp.getState().metaData().index(index).getMappings().containsKey(type);
-
 
 		if (indexExist && typeExist) {
 			ClusterState cs = ESReport.getESClient().admin().cluster().prepareState().setIndices(index).execute().actionGet().getState();
@@ -72,8 +70,8 @@ public class Util {
 	}
 
 	public static List<String> getESIndexList() {
-		String[] indexList = ESReport.getESClient().admin().cluster().prepareState().execute().actionGet().getState().getMetaData().concreteAllIndices();
-		return Arrays.asList(indexList);
+		String[] indices =  ESReport.getESClient().admin().indices().prepareGetIndex().setFeatures().get().getIndices();
+		return Arrays.asList(indices);		
 	}
 
 	public static List<String> getESAliasList() {

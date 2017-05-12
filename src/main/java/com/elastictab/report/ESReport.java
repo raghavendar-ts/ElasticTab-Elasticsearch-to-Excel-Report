@@ -41,14 +41,17 @@ import org.codehaus.jackson.type.TypeReference;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.Client;
-import org.elasticsearch.client.transport.TransportClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.settings.Settings.Builder;
 import org.elasticsearch.common.transport.InetSocketTransportAddress;
 import org.elasticsearch.common.unit.TimeValue;
-import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.QueryStringQueryBuilder;
 import org.elasticsearch.search.SearchHitField;
 import org.elasticsearch.search.SearchHits;
+import org.elasticsearch.search.builder.SearchSourceBuilder;
+import org.elasticsearch.transport.client.PreBuiltTransportClient;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -82,23 +85,24 @@ public class ESReport {
 		}
 
 		//Builder builder = ImmutableSettings.settingsBuilder();
-		Builder builder = Settings.settingsBuilder();
-		
-		
-		builder.put("client.transport.sniff", true);
+		Builder builder = Settings.builder();
+				
 		if (!properties.get("clustername").equals(null) && !properties.get("clustername").equals("")) {
 			builder.put("cluster.name", (String) properties.get("clustername"));
 		}
 
 		Settings settings = builder.build();		
 		try {
-			esClient = TransportClient.builder().settings(settings).build().addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(hostname), 9300));
+			esClient = new PreBuiltTransportClient(settings).addTransportAddress(new InetSocketTransportAddress(InetAddress.getByName(hostname), 9300));
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 		}
 	}
 
 	public static Client getESClient() {
+		if(esClient == null){
+			initializeESClient();
+		}
 		return esClient;
 	}
 
@@ -243,7 +247,10 @@ public class ESReport {
 		if (inputDataConfig.getElasticsearch().isUseAlias()) {
 			index = inputDataConfig.getElasticsearch().getAlias();
 		}
-		SearchRequestBuilder searchRequestBuilder = esClient.prepareSearch(index).setTypes(inputDataConfig.getElasticsearch().getType()).setSource(queryObj.toString());
+
+		QueryBuilder queryBuilder = QueryBuilders.wrapperQuery(queryObj.getJSONObject("query").toString());
+		
+		SearchRequestBuilder searchRequestBuilder = esClient.prepareSearch(index).setTypes(inputDataConfig.getElasticsearch().getType()).setQuery(queryBuilder);
 		if (inputDataConfig.getElasticsearch().getRouting() != null) {
 			searchRequestBuilder.setRouting((String[]) inputDataConfig.getElasticsearch().getRouting().toArray());
 		}
@@ -251,12 +258,11 @@ public class ESReport {
 		//searchRequestBuilder.setFrom(queryObj.getInt("from"));
 		searchRequestBuilder.setScroll(new TimeValue(60000));
 		searchRequestBuilder.setSize(inputDataConfig.getElasticsearch().getBatchSize());
-		searchRequestBuilder.addFields(fields);
-
+		searchRequestBuilder.setFetchSource(fields, null);
 		response = searchRequestBuilder.execute().actionGet();
 		while (true) {
 			SearchHits hits = response.getHits();
-			hitscount = hits.totalHits();
+			hitscount = hits.totalHits;
 			buildDataLayout(hits);
 			
 			System.out.println("Processed " + Integer.valueOf((inputDataConfig.getElasticsearch().getBatchSize() * k) + inputDataConfig.getElasticsearch().getBatchSize()) + " of " + hitscount);
@@ -267,39 +273,7 @@ public class ESReport {
 		    }
 		}
 		
-		/*
-		do {
-			queryObj.put("from", inputDataConfig.getElasticsearch().getBatchSize() * k);
-			SearchResponse response = null;
-
-			String index = inputDataConfig.getElasticsearch().getIndex();
-			if (inputDataConfig.getElasticsearch().isUseAlias()) {
-				index = inputDataConfig.getElasticsearch().getAlias();
-			}
-
-			SearchRequestBuilder searchRequestBuilder = esClient.prepareSearch(index).setTypes(inputDataConfig.getElasticsearch().getType()).setSource(queryObj.toString());
-			if (inputDataConfig.getElasticsearch().getRouting() != null) {
-				searchRequestBuilder.setRouting((String[]) inputDataConfig.getElasticsearch().getRouting().toArray());
-			}
-			
-			searchRequestBuilder.setFrom(queryObj.getInt("from"));
-			searchRequestBuilder.setSize(inputDataConfig.getElasticsearch().getBatchSize());
-			searchRequestBuilder.addFields(fields);
-
-			response = searchRequestBuilder.execute().actionGet();
-
-			SearchHits hits = response.getHits();
-			hitscount = hits.totalHits();
-	
-			buildDataLayout(hits);
-			System.out.println("Processed " + Integer.valueOf((inputDataConfig.getElasticsearch().getBatchSize() * k) + inputDataConfig.getElasticsearch().getBatchSize()) + " of " + hitscount);
-			k++;
-			rows_fetched = inputDataConfig.getElasticsearch().getBatchSize() * k;
-		} while (rows_fetched < hitscount);
-		System.out.println("Finished processing data");
-		*/
 		formatExcelSheet();
-
 		return wb;
 	}
 
@@ -349,7 +323,7 @@ public class ESReport {
 		// For each row
 		for (int i = 0; i < hits.getHits().length; i++) {
 			// Row n
-			Map<String, SearchHitField> responseFields = hits.getAt(i).getFields();
+			Map<String, Object> responseFields = hits.getAt(i).getSourceAsMap();
 			row = sheet.createRow(rownumber);
 			for (int j = 0; j < reportColumnConfigList.size(); j++) {
 				ReportColumnConfig reportColumnConfig = reportColumnConfigList.get(j);
@@ -363,7 +337,7 @@ public class ESReport {
 		}
 	}
 
-	private String getExprValue(Map<String, SearchHitField> responseFields, String format) {
+	private String getExprValue(Map<String, Object> responseFields, String format) {
 		String exprTemp = format;
 		int exprIndexSize = 0;
 
@@ -395,77 +369,154 @@ public class ESReport {
 			if (elementeryExprArray[0].equals("0")) {
 				String t = getValue(responseFields, elementeryExprArray[1]);
 				t = getExprValue(responseFields, t);
-				exprTemp = exprTemp.replaceFirst(Pattern.quote(exprTemp.substring(exprIndex.get(Constants.START_INDEX), exprIndex.get(Constants.END_INDEX) + 1)), t);
+				exprTemp  = buildExprValue(exprTemp, exprIndex, t);
 			}
-
+			
 			if (elementeryExprArray[0].equals("1")) {
-				String t = getDerivedValue(responseFields, elementeryExprArray[1], elementeryExprArray[2]);
+				String t = null;
+				if(elementeryExprArray.length != 3){
+					t = "";
+				}
+				else{
+					t = getDerivedValue(responseFields, elementeryExprArray[1], elementeryExprArray[2]);
+				}				
 				t = getExprValue(responseFields, t);
-				exprTemp = exprTemp.replaceFirst(Pattern.quote(exprTemp.substring(exprIndex.get(Constants.START_INDEX), exprIndex.get(Constants.END_INDEX) + 1)), t);
+				exprTemp  = buildExprValue(exprTemp, exprIndex, t);
 			}
 
 			if (elementeryExprArray[0].equals("2")) {
-				String t = getStringLength(elementeryExprArray[1]);
-				exprTemp = exprTemp.replaceFirst(Pattern.quote(exprTemp.substring(exprIndex.get(Constants.START_INDEX), exprIndex.get(Constants.END_INDEX) + 1)), t);
+				String t = null;
+				if(elementeryExprArray.length != 2){
+					t= "";
+				}
+				else{
+					t = getStringLength(elementeryExprArray[1]);
+				}
+				exprTemp  = buildExprValue(exprTemp, exprIndex, t);
 			}
 
 			if (elementeryExprArray[0].equals("3")) {
-				String t = getFormatNumberLength(elementeryExprArray[1], Integer.valueOf(elementeryExprArray[2]));
-				exprTemp = exprTemp.replaceFirst(Pattern.quote(exprTemp.substring(exprIndex.get(Constants.START_INDEX), exprIndex.get(Constants.END_INDEX) + 1)), t);
+				String t = null;
+				if(elementeryExprArray.length != 3){
+					t= "";
+				}
+				else{
+					t = getFormatNumberLength(elementeryExprArray[1], Integer.valueOf(elementeryExprArray[2]));
+				} 
+				exprTemp  = buildExprValue(exprTemp, exprIndex, t);
 			}
 
 			if (elementeryExprArray[0].equals("4")) {
-				String t = getSubString(elementeryExprArray[1], Integer.valueOf(elementeryExprArray[2]), Integer.valueOf(elementeryExprArray[3]));
-				exprTemp = exprTemp.replaceFirst(Pattern.quote(exprTemp.substring(exprIndex.get(Constants.START_INDEX), exprIndex.get(Constants.END_INDEX) + 1)), t);
+				String t = null;
+				if(elementeryExprArray.length != 4){
+					t= "";
+				}
+				else{
+					t = getSubString(elementeryExprArray[1], Integer.valueOf(elementeryExprArray[2]), Integer.valueOf(elementeryExprArray[3]));
+				}  
+				exprTemp  = buildExprValue(exprTemp, exprIndex, t);
 			}
 
 			if (elementeryExprArray[0].equals("5")) {
-				String t = getCharacter(elementeryExprArray[1], Integer.valueOf(elementeryExprArray[2]));
-				exprTemp = exprTemp.replaceFirst(Pattern.quote(exprTemp.substring(exprIndex.get(Constants.START_INDEX), exprIndex.get(Constants.END_INDEX) + 1)), t);
+				String t = null;
+				if(elementeryExprArray.length != 3){
+					t= "";
+				}
+				else{
+					t = getCharacter(elementeryExprArray[1], Integer.valueOf(elementeryExprArray[2]));
+				}		
+				exprTemp  = buildExprValue(exprTemp, exprIndex, t);
 			}
 
 			if (elementeryExprArray[0].equals("6")) {
-				String t = getComputedString(elementeryExprArray[1]);
-				exprTemp = exprTemp.replaceFirst(Pattern.quote(exprTemp.substring(exprIndex.get(Constants.START_INDEX), exprIndex.get(Constants.END_INDEX) + 1)), t);
+				String t = null;
+				if(elementeryExprArray.length != 2){
+					t= "";
+				}
+				else{
+					t = getComputedString(elementeryExprArray[1]);
+				} 
+				exprTemp  = buildExprValue(exprTemp, exprIndex, t);
 			}
 
 			if (elementeryExprArray[0].equals("7")) {
-				String t = getRange(elementeryExprArray[1], elementeryExprArray[2]);
+				String t = null;
+				if(elementeryExprArray.length != 3){
+					t= "";
+				}
+				else{
+					t = getRange(elementeryExprArray[1], elementeryExprArray[2]);
+				}
 				t = getExprValue(responseFields, t);
-				exprTemp = exprTemp.replaceFirst(Pattern.quote(exprTemp.substring(exprIndex.get(Constants.START_INDEX), exprIndex.get(Constants.END_INDEX) + 1)), t);
+				exprTemp  = buildExprValue(exprTemp, exprIndex, t);
 			}
 
 			if (elementeryExprArray[0].equals("8")) {
-				String t = getArrayIndexOf(responseFields, elementeryExprArray[1], Integer.valueOf(elementeryExprArray[2]));
-				exprTemp = exprTemp.replaceFirst(Pattern.quote(exprTemp.substring(exprIndex.get(Constants.START_INDEX), exprIndex.get(Constants.END_INDEX) + 1)), String.valueOf(t));
+				String t = null;
+				if(elementeryExprArray.length != 3){
+					t= "";
+				}
+				else{
+					t = getArrayIndexOf(responseFields, elementeryExprArray[1], Integer.valueOf(elementeryExprArray[2]));
+				} 
+				exprTemp  = buildExprValue(exprTemp, exprIndex, t);
 			}
 
 			if (elementeryExprArray[0].equals("9")) {
-				String t = getArrayIndexOf(responseFields, elementeryExprArray[1], elementeryExprArray[2]);
-				exprTemp = exprTemp.replaceFirst(Pattern.quote(exprTemp.substring(exprIndex.get(Constants.START_INDEX), exprIndex.get(Constants.END_INDEX) + 1)), String.valueOf(t));
+				String t = null;
+				if(elementeryExprArray.length != 3){
+					t= "";
+				}
+				else{
+					t = getArrayIndexOf(responseFields, elementeryExprArray[1], elementeryExprArray[2]);
+				} 
+				exprTemp  = buildExprValue(exprTemp, exprIndex, t);
 			}
 
 			if (elementeryExprArray[0].equals("10")) {
-				String t = getArrayValueAt(responseFields, elementeryExprArray[1], Integer.valueOf(elementeryExprArray[2]));
-				exprTemp = exprTemp.replaceFirst(Pattern.quote(exprTemp.substring(exprIndex.get(Constants.START_INDEX), exprIndex.get(Constants.END_INDEX) + 1)), t);
+				String t = null;
+				if(elementeryExprArray.length != 3){
+					t= "";
+				}
+				else{
+					t = getArrayValueAt(responseFields, elementeryExprArray[1], Integer.valueOf(elementeryExprArray[2]));
+				} 
+				exprTemp  = buildExprValue(exprTemp, exprIndex, t);
 			}
 		}
 
 		return exprTemp;
 	}
 
+	private String buildExprValue(String exprTemp, Map<String, Integer> exprIndex, String t) {
+		String value = null;
+		if(t == null){
+			value = nullValue;
+		}
+		else{
+			value = exprTemp.replaceFirst(Pattern.quote(exprTemp.substring(exprIndex.get(Constants.START_INDEX), exprIndex.get(Constants.END_INDEX) + 1)), t);	
+		}
+		return value;
+	}
+
 	// ProcessType: 0
-	private String getValue(Map<String, SearchHitField> responseFields, String fieldName) {
+	private String getValue(Map<String, Object> responseFields, String fieldName) {
 		if (responseFields.containsKey(fieldName)) {
-			SearchHitField fieldValueObj = responseFields.get(fieldName);
-			return fieldValueObj.getValue().toString();
+			String fieldValueObj = null;
+			if(responseFields.get(fieldName) instanceof List){
+				fieldValueObj = ((List<String>) responseFields.get(fieldName)).get(0);
+			}
+			else{
+				fieldValueObj = (String) responseFields.get(fieldName);
+			}
+			return fieldValueObj;
 		} else {
 			return nullValue;
 		}
 	}
 
 	// ProcessType: 1
-	private String getDerivedValue(Map<String, SearchHitField> responseFields, String valueMappingKey, String value) {
+	private String getDerivedValue(Map<String, Object> responseFields, String valueMappingKey, String value) {
 		if (customMapping.containsKey(valueMappingKey)) {
 			Map<String, Object> tempCustomMapping = (Map<String, Object>) customMapping.get(valueMappingKey);
 
@@ -504,7 +555,14 @@ public class ESReport {
 	// ProcessType: 4
 	private String getSubString(String fieldValue, int from, int end) {
 		if (!fieldValue.equals("-")) {
-			return fieldValue.substring(from, end);
+			String subString = null;
+			try{
+				subString = fieldValue.substring(from, end);
+			}
+			catch(Exception e){
+				subString = "";
+			}					
+			return subString;
 		} else {
 			return fieldValue;
 		}
@@ -550,7 +608,6 @@ public class ESReport {
 						return nullValue;
 					}
 				}
-
 			}
 			if (tempCustomMapping.containsKey("default")) {
 				return String.valueOf(tempCustomMapping.get("default"));
@@ -562,27 +619,27 @@ public class ESReport {
 	}
 
 	// ProcessType: 8
-	private String getArrayIndexOf(Map<String, SearchHitField> responseFields, String fieldName, int value) {
+	private String getArrayIndexOf(Map<String, Object> responseFields, String fieldName, int value) {
 		try {
-			return String.valueOf(responseFields.get(fieldName).getValues().indexOf(value));
+			return String.valueOf(((List<Object>)responseFields.get(fieldName)).indexOf(value));
 		} catch (Exception e) {
 			return nullValue;
 		}
 	}
 
 	// ProcessType: 9
-	private String getArrayIndexOf(Map<String, SearchHitField> responseFields, String fieldName, String value) {
+	private String getArrayIndexOf(Map<String, Object> responseFields, String fieldName, String value) {
 		try {
-			return String.valueOf(responseFields.get(fieldName).getValues().indexOf(value));
+			return String.valueOf(((List<Object>)responseFields.get(fieldName)).indexOf(value));
 		} catch (Exception e) {
 			return nullValue;
 		}
 	}
 
 	// ProcessType 10
-	private String getArrayValueAt(Map<String, SearchHitField> responseFields, String fieldName, int arrayIndex) {
+	private String getArrayValueAt(Map<String, Object> responseFields, String fieldName, int arrayIndex) {
 		try {
-			return String.valueOf(responseFields.get(fieldName).getValues().get(arrayIndex));
+			return String.valueOf(((List<Object>)responseFields.get(fieldName)).get(arrayIndex));
 		} catch (Exception e) {
 			return nullValue;
 		}

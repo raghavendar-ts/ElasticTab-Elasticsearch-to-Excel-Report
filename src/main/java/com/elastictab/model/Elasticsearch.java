@@ -75,5 +75,4 @@ public class Elasticsearch {
 	public void setAlias(String alias) {
 		this.alias = alias;
 	}
-
 }
